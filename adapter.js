@@ -1,4 +1,4 @@
-const given = require('./given');
+const given = require('./Given');
 
 module.exports = {
   resolved(val) {

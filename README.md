@@ -17,7 +17,7 @@ g.then(function(msg) {
 Use in NodeJS by adding the file GIven.js, and require it where needed:
 
 ```js
-const given = require('./given');
+const given = require('./Given');
 var g = given().resolve("Hello");
 g.then(function(msg) {
   console.log(msg);
