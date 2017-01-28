@@ -1,187 +1,195 @@
-const states = {
-  PENDING: 'pending',
-  FULFILLED: 'fulfilled',
-  REJECTED: 'rejected',
-};
+(function UMD(name, context, definition) {
+  // special form of UMD for polyfilling across evironments
+  context[name] = context[name] || definition();
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = context[name];
+  } else if (typeof define === 'function' && define.amd) {
+    define(() => context[name]);
+  }
+}('given', typeof global !== 'undefined' ? global : this, () => {
+  const states = {
+    PENDING: 'pending',
+    FULFILLED: 'fulfilled',
+    REJECTED: 'rejected',
+  };
 
-function identity(value) {
-  return value;
-}
+  function identity(value) {
+    return value;
+  }
 
-function throwIdentity(reason) {
-  throw reason;
-}
+  function throwIdentity(reason) {
+    throw reason;
+  }
 
-function isFunction(val) {
-  return val && typeof val === 'function';
-}
+  function isFunction(val) {
+    return val && typeof val === 'function';
+  }
 
-function isObject(val) {
-  return val && typeof val === 'object';
-}
+  function isObject(val) {
+    return val && typeof val === 'object';
+  }
 
-function async(fn) {
-  setImmediate(fn);
-}
+  function isPromise(val) {
+    return val && typeof val === 'object' && val.thenable;
+  }
 
-let Promise;
+  function isPending(status) {
+    return status && status === states.PENDING;
+  }
 
-function isPromise(val) {
-  return val && Object.getPrototypeOf(val) === Promise;
-}
+  function isFulfilled(status) {
+    return status && status === states.FULFILLED;
+  }
 
-function Resolve(given, x) {
-  if (given === x) {
-    given.reject(new TypeError('Promise and value refer to the same object'));
-  } else if (isPromise(x)) {
-    if (x.status === states.PENDING) {
+  function schedule(fn) {
+    setTimeout(fn, 0);
+  }
+
+  function Resolve(promise, x) {
+    if (promise === x) {
+      promise.reject(new TypeError('The promise and value refer to the same object'));
+    } else if (isPromise(x)) {
       x.then((val) => {
-        Resolve(given, val);
+        Resolve(promise, val);
       }, (reason) => {
-        given.reject(reason);
-      });
-    } else if (x.status === states.FULFILLED) {
-      given.fulfill(x.value);
-    } else {
-      given.reject(x.value);
-    }
-  } else if (isFunction(x) || isObject(x)) {
-    let called = false;
-    try {
-      const then = x.then;
-      if (isFunction(then)) {
-        then.call(x,
-          (y) => {
-            if (!called) {
-              Resolve(given, y);
-              called = true;
-            }
-          }, (r) => {
-            if (!called) {
-              given.reject(r);
-              called = true;
-            }
-          }
-        );
-      } else {
-        given.fulfill(x);
-      }
-    } catch (err) {
-      if (!called) {
-        given.reject(err);
-      }
-    }
-  } else {
-    given.fulfill(x);
-  }
-}
-
-function Given() {
-  const given = Object.create(Promise);
-  given.init();
-  return given;
-}
-
-const Thenable = {
-  then(onFulfilled, onRejected) {
-    const given = Given();
-
-    given.setFulfillHandler(onFulfilled);
-    given.setRejectHandler(onRejected);
-
-    this.enqueue(given);
-    return given;
-  },
-};
-
-Promise = Object.create(Thenable);
-
-Promise.init = function init() {
-  this.status = states.PENDING;
-  this.queue = [];
-  this.handlers = {};
-};
-
-Promise.setFulfillHandler = function setFulfillHandler(handler = identity) {
-  this.handlers.fulfill = isFunction(handler) ? handler : identity;
-};
-
-Promise.setRejectHandler = function setRejectHandler(handler = throwIdentity) {
-  this.handlers.reject = isFunction(handler) ? handler : throwIdentity;
-};
-
-Promise.fulfill = function fulfill(value) {
-  if (this.status === states.PENDING) {
-    this.status = states.FULFILLED;
-    this.value = value;
-    this.dequeueAll();
-  }
-};
-
-Promise.reject = function reject(reason) {
-  if (this.status === states.PENDING) {
-    this.status = states.REJECTED;
-    this.value = reason;
-    this.dequeueAll();
-  }
-};
-
-Promise.enqueue = function enqueue(given) {
-  if (this.status !== states.PENDING) {
-    this.executeHandler(given);
-  } else {
-    this.queue.push(given);
-  }
-};
-
-Promise.dequeueAll = function dequeueAll() {
-  while (this.queue.length) {
-    this.executeHandler(this.queue.shift());
-  }
-};
-
-Promise.executeHandler = function executeHandler(given) {
-  let handler;
-  let value = this.value;
-
-  if (this.status === states.FULFILLED) {
-    handler = given.handlers.fulfill;
-  } else {
-    handler = given.handlers.reject;
-  }
-
-  async(() => {
-    try {
-      value = handler(value);
-    } catch (err) {
-      given.reject(err);
-      return;
-    }
-    Resolve(given, value);
-  });
-};
-
-module.exports = {
-  resolved(value) {
-    const given = Given();
-    Resolve(given, value);
-    return given;
-  },
-  rejected(reason) {
-    const given = Given();
-    given.reject(reason);
-    return given;
-  },
-  deferred() {
-    const promise = Given();
-    return {
-      promise,
-      resolve(value) {
-        Resolve(promise, value);
-      },
-      reject(reason) {
         promise.reject(reason);
+      });
+    } else if (isFunction(x) || isObject(x)) {
+      let called = false;
+      try {
+        const then = x.then;
+        if (isFunction(then)) {
+          then.call(x, (val) => {
+            if (!called) {
+              Resolve(promise, val);
+              called = true;
+            }
+          }, (reason) => {
+            if (!called) {
+              promise.reject(reason);
+              called = true;
+            }
+          });
+        } else {
+          promise.resolve(x);
+        }
+      } catch (err) {
+        if (!called) {
+          promise.reject(err);
+        }
+      }
+    } else {
+      promise.resolve(x);
+    }
+  }
+
+  function queue() {
+    const items = [];
+
+    const add = function add(item) {
+      items.push(item);
+    };
+
+    const serve = function serve() {
+      while (items.length) {
+        let item = items.shift();
+        item.process(item);
+        item = undefined;
       }
     };
+
+    return Object.freeze({
+      add,
+      serve
+    });
   }
-};
+
+  function given(fn) {
+    let status = states.PENDING;
+    let value;
+    let that;
+
+    const { add, serve } = queue();
+
+    const then = function then(onFulfilled, onRejected) {
+      const g = {
+        process(self) {
+          let handler;
+          let val;
+
+          if (isFulfilled(status)) {
+            handler = isFunction(onFulfilled) ? onFulfilled : identity;
+          } else {
+            handler = isFunction(onRejected) ? onRejected : throwIdentity;
+          }
+
+          try {
+            val = handler(value);
+          } catch (err) {
+            self.reject(err);
+            return;
+          }
+          Resolve(self.promise, val);
+        }
+      };
+
+      g.promise = given((resolve, reject) => {
+        g.resolve = resolve;
+        g.reject = reject;
+      });
+
+      add(g);
+
+      if (!isPending(status)) {
+        schedule(serve);
+      }
+
+      return g.promise;
+    };
+
+    const fail = function fail(err) {
+      return then(undefined, err);
+    };
+
+    const resolve = function resolve(val) {
+      if (isPending(status)) {
+        status = states.FULFILLED;
+        value = val;
+        schedule(serve);
+      }
+      return that;
+    };
+
+    const reject = function reject(reason) {
+      if (isPending(status)) {
+        status = states.REJECTED;
+        value = reason;
+        schedule(serve);
+      }
+      return that;
+    };
+
+    that = Object.freeze({
+      thenable: true,
+      resolve,
+      reject,
+      then,
+      catch: fail
+    });
+
+    try {
+      if (fn) {
+        fn((val) => {
+          resolve(val);
+        }, (reason) => {
+          reject(reason);
+        });
+      }
+    } catch (err) {
+      reject(err);
+    }
+    return that;
+  }
+
+  return given;
+}));

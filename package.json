@@ -1,11 +1,11 @@
 {
   "name": "Given",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Promises/A+ spec implementation for fun and learning purposes",
   "main": "Given.js",
   "scripts": {
     "lint": "eslint Given.js",
-    "test": "promises-aplus-tests Given.js"
+    "test": "promises-aplus-tests adapter"
   },
   "keywords": [
     "Promises/A+"
