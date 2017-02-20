@@ -1,5 +1,9 @@
 # Given
 
+<a href="https://promisesaplus.com/">
+    <img src="https://promisesaplus.com/assets/logo-small.png" alt="Promises/A+ logo"
+         title="Promises/A+ 1.0 compliant" align="right" />
+</a>
 
 Given is a Promises/A+ spec implementation wrote for fun and learning purposes, using ES6 syntax, taking as reference the blog post on <a href="http://abdulapopoola.com/2015/02/23/how-to-write-a-promisea-compatible-library/">here, </a> and the Native-Promise-Only library on <a href=""/>here. </a>.
 
